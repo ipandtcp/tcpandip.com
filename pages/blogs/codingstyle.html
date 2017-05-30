@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Kevin's Blog_Codingstyle</title>
+<meta name="keywords" content="" />
+<meta name="description" content="" />
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/ico" />
+<link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600,700,900" rel="stylesheet" />
+<link href="../../default.css" rel="stylesheet" type="text/css" media="all" />
+<link href="../../fonts.css" rel="stylesheet" type="text/css" media="all" />
+<link rel="stylesheet" href="codingstyle.css" type="text/css" />
+
+<!--[if IE 6]><link href="default_ie6.css" rel="stylesheet" type="text/css" /><![endif]-->
+
+</head>
+<body>
+<div id="page" class="container">
+	<div id="header">
+		<div id="logo">
+			<img src="../../images/pic01.jpg" alt="" />
+			<h1><a href="#">Kevin Zhu</a></h1>
+			<span>Let's talk about <a  rel="nofollow"></a>coding</span>
+		</div>
+		<div id="menu">
+			<ul>
+				<li><a href="../../index.html" accesskey="1" title="">Homepage</a></li>
+				<li class="current_page_item"><a href="../menu_kernel.html" accesskey="2" title="">Linux kernel layer</a></li>
+				<li><a href="../menu_usr.html" accesskey="2" title="">Linux user layer</a></li>
+				<li><a href="../menu_embed.html" accesskey="2" title="">Embedded</a></li>
+				<li><a href="../menu_net.html" accesskey="2" title="">Network</a></li>
+				<!--<li><a href="#" accesskey="4" title="">Careers</a></li>	-->
+			</ul>
+			
+		</div>
+	</div>
+	<div id="main">
+		<div id="banner">
+			<img src="../../images/1.jpg" alt="" class="image-full" />
+		</div>
+		<div style="text-align: left;">
+			<p style="padding-top:0px; padding-bottom:0px; margin-top:8px; margin-bottom:8px; line-height:23px; font-size:13px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体">
+
+			<br />
+			<span style="font-size:22px">
+				This article is original by Kevin Zhu,But you can copy and modify it just like "GPL"<br />
+				because most content is excerpt from Linux Kernel Codingstyle<br /><br />
+			</span>
+			<span style="color:#1E65FF;">When coding,should think about:
+				<br />        correctness、robustness、reliability、effectively、usability、reusability、readability、extendibility、compatibility、portability
+			</span>
+			<br />
+			<span>If you aware lost some chapter,that's fine(*;*),you can find the whole article in linux kernel source file</span><br />
+			<span style="color:blue;">Chapter 1: Indentation</span><br /><br />
+			        Don't put multiple statements on a single line unless you have<br />        
+			        something to hide:<br /><br />	        
+			        if (condition) do_this;<br />	          do_something_everytime;<br />	<br /><span style="color:blue;">Chapter 2: Breaking long lines and strings</span><br /><br />        The limit on the length of lines is 80 columns and this is a strongly   preferred limit.<br />        tatements longer than 80 columns will be broken into sensible chunks, unless    exceeding 80 columns significantly increases readability and does not hide  information. <br /><br /><span style="color:blue;">Chapter 3: Placing Braces and Spaces</span><br /><br />        opening  brace last on the line, and put the closing brace first ,his applies to all non-function statement blocks (if, switch, for, while, do).  E.g.:<br />        However, there is one special case, namely functions: they have the opening brace at the beginning of the next line,<br />        <br />        Note that the closing brace is empty on a line of its own, _except_ in  the cases where it is followed by a continuation of the same statement,<br />        ie a "while" in a do-statement or an "else" in an if-statement, like    this:<br />            do {<br />		        body of do-loop<br />	        } while (condition);<br /><br />        and<br /><br />	        if (x == y) {<br />		        ..<br />	        } else if (x &gt; y) {<br />		        ...<br />	        } else {<br />		        ....<br />	        }<br />	<br />        Do not unnecessarily use braces where a single statement will do.<br />            if (condition)<br />                action();<br />        and<br />            if (condition)<br />                do_this();<br />            else<br />                do_that();<br />        This does not apply if only one branch of a conditional statement is a single   statement; in the latter case use braces in both branches:<br />            if (condition) {<br />	            do_this();<br />	            do_that();<br />            } else {<br />	            otherwise();<br />            }<br />    <span style="color:blue;">3.1:  Spaces</span><br />        So use a space after these keywords:    if, switch, case, for, do, while<br />        but not with sizeof, typeof, alignof, or __attribute__.  E.g.,<br />	        s = sizeof(struct file);<br />        Do not add spaces around (inside) parenthesized expressions.  This example is   *bad*:<br />	        s = sizeof( struct file );<br />	<br />	    when declaring pointer data or a function that returns a pointer type, the  preferred use of '*' is adjacent to the data name or function name and not<br />        adjacent to the type name.  Examples:<br />	        char *linux_banner;<br />	    unsigned long long memparse(char *ptr, char **retptr);<br />	        char *match_strdup(substring_t *s);<br />	<br />	    Use one space around (on each side of) most binary and ternary operators,such as any of these:<br />	        =  +  -  &lt;  &gt;  *  /  %  |  &amp;  ^  &lt;=  &gt;=  ==  !=  ?  :<br />        but no space after unary operators:<br />	        &amp;  *  +  -  ~  !  sizeof  typeof  alignof  __attribute__  defined<br />        no space before the postfix increment &amp; decrement unary operators:<br />	        ++  --<br />        no space after the prefix increment &amp; decrement unary operators:<br />	        ++  --<br />        and no space around the '.' and "-&gt;" structure member operators.<br />	<br /><span style="color:../../;">Chapter 4: Naming	</span><br /><br />        If you are afraid to mix up your local variable names, you have another　problem, which is called the function-growth-hormone-imbalance syndrome.<br />	<br /><span style="color:blue;">Chapter 5: Typedefs</span><br /><br />        Lots of people think that typedefs "help readability". Not so. They are useful only for:	<br />            (a) totally opaque objects <br />            (b) Clear integer types, where the abstraction _helps_ avoid confusion whether it is "int" or "long".<br />            (c) when you use sparse to literally create a _new_ type for  type-checking.<br />            (d) New types which are identical to standard C99 types, in certain exceptional circumstances.<br />            (e) Types safe for use in userspace.<br />                    In certain structures which are visible to userspace, we cannot　require C99 types and cannot use the 'u32' form above. Thus, <br />                    we use __u32 and similar types in all structures which are shared with userspace.<br />	<br /><span style="color:blue;">Chapter 6: Functions</span><br /><br />            Functions should be short and sweet, and do just one thing. and do just one thing.  They should<br />        fit on one or two screenfuls of text (the ISO/ANSI screen size is 80x24,<br />        as we all know), and do one thing and do that well.<br />        <br />            If you have a complex function	,you should adhere to the maximum limits all the more closely.  Use helper functions with<br />        descriptive names (you can ask the compiler to in-line them if you think<br />        it's performance-critical, and it will probably do a better job of it than you would have done).<br />        <br />            In source files, separate functions with one blank line. <br />	<br /><span style="color:blue;">Chapter 7: Centralized exiting of functions	</span><br /><br />	    The rationale is:<br />            - unconditional statements are easier to understand and follow<br />            - nesting is reduced<br />            - errors by not updating individual exit points when making　modifications are prevented<br />            - saves the compiler work to optimize redundant code away ;)<br />	<br /><span style="color:blue;">Chapter 8: Commenting<br /></span><br />            NEVER　try to explain HOW your code works in a comment: it's much better to　write the code so that the _working_ is obvious, <br />        and it's a waste of　time to explain badly written code.<br />            You can make　small comments to note or warn about something particularly clever (or　ugly), but try to avoid excess.  Instead, <br />        put the comments at the head　of the function, telling people what it does, and possibly WHY it does  it.<br /><br /><span style="color:blue;">Chapter 11: Data structures</span><br /><br />            Data structures that have visibility outside the single-threaded　environment they are created and destroyed in should always have　reference counts.<br />        Note that locking is _not_ a replacement for reference counting.　Locking is used to keep data structures coherent, while reference　counting is a memory management technique.  <br />        Usually both are needed, and　they are not to be confused with each other.<br />            Remember: if another thread can find your data structure, and you don't　have a reference count on it, you almost certainly have a bug.<br /><br /><span style="color:blue;">Chapter 12: Macros, Enums and RTL</span><br /><br />            Names of macros defining constants and labels in enums are capitalized.<br />            Enums are preferred when defining several related constants.<br />            CAPITALIZED macro names are appreciated but macros resembling functions may be named in lower case.<br />            Generally, inline functions are preferable to macros resembling functions.<br />            Things to avoid when using macros:<br />                1) macros that affect control flow:<br />                2) macros that depend on having a local variable with a magic name:<br />                3) macros with arguments that are used as l-values: FOO(x) = y; will　bite you if somebody e.g. turns FOO into an inline function.<br />                4) forgetting about precedence: macros defining constants using expressions　must enclose the expression in parentheses.<br /><br /><span style="color:blue;">Chapter 15: The inline disease</span><br /><br />            A reasonable rule of thumb is to not put inline at functions that have more　than 3 lines of code in them. <br /><br /><span style="color:blue;">Chapter 16: Function return values and names</span><br /><br />            If the name of a function is an action or an imperative command　the function should return an error-code integer.  <br />            If the name　is a predicate, the function should return a "succeeded" boolean.<br />            For example, "add work" is a command, and the add_work() function returns 0<br />       for success or -EBUSY for failure.  In the same way, <br />       "PCI device present" is　a predicate, and the pci_dev_present() function returns 1 if it succeeds in　finding a matching device or 0 if it doesn't.<br />            All EXPORTed functions must respect this convention, and so should all　public functions.  Private (static) functions need not, <br />      but it is　recommended that they do.<br />            Functions whose return value is the actual result of a computation, rather　than an indication of whether the computation succeeded, <br />      are not subject to　this rule.  Generally they indicate failure by returning some out-of-range　result.  Typical examples would be functions that return pointers<br /><br /><br /><br />
+		</p>
+		</div>
+		<div id="copyright">
+			<span>&copy; Kevin. All rights reserved. | Photos by <a>Internet</a></span>
+			<!--!<span>Design by <a rel="nofollow">TEMPLATED</a>.</span>-->
+		</div>
+	</div>
+</div>
+</body>
+</html>

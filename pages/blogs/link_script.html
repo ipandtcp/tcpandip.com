@@ -1,0 +1,1285 @@
+<!DOCTYPE html PUBLIC>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Kevin's Blog_lds</title>
+<meta name="keywords" content="" />
+<meta name="description" content="" />
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/ico" />
+<link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600,700,900" rel="stylesheet" />
+<link href="../../default.css" rel="stylesheet" type="text/css" media="all" />
+<link href="../../fonts.css" rel="stylesheet" type="text/css" media="all" />
+
+<!--[if IE 6]><link href="default_ie6.css" rel="stylesheet" type="text/css" /><![endif]-->
+
+</head>
+<body>
+<div id="page" class="container">
+	<div id="header">
+		<div id="logo">
+			<img src="../../images/pic01.jpg" alt="" />
+			<h1><a href="#">Kevin Zhu</a></h1>
+			<span>Let's talk about <a  rel="nofollow"></a>coding</span>
+		</div>
+		<div id="menu">
+			<ul>
+				<li><a href="../../index.html" accesskey="1" title="">Homepage</a></li>
+				<li><a href="../menu_kernel.html" accesskey="2" title="">Linux kernel layer</a></li>
+				<li class="current_page_item"><a href="../menu_usr.html" accesskey="2" title="">Linux user layer</a></li>
+				<li><a href="../menu_embed.html" accesskey="2" title="">Embedded</a></li>
+				<li><a href="../menu_net.html" accesskey="2" title="">Network</a></li>
+				<!--<li><a href="#" accesskey="4" title="">Careers</a></li>	-->
+			</ul>
+			
+		</div>
+	</div>
+	<div id="main">
+		<div id="banner">
+			<img src="../../images/3.jpg" alt="" class="image-full" />
+		</div>
+		<div style="text-align: left;">
+
+<p style="padding-top:0px; padding-bottom:0px; margin-top:8px; margin-bottom:8px; line-height:23px; font-size:13px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体">
+<span style="padding:0px; margin:0px; font-weight:600">一、 概论</span></p>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px">每一个链接过程都由链接脚本(linker script, 一般以lds作为文件的后缀名)控制. 链接脚本主要用于规定如何把输入文件内的section放入输出文件内, 并控制输出文件内各部分在程序地址空间内的布局. 但你也可以用连接命令做一些其他事情.</div>
+<div style="padding:0px; margin:0px">连接器有个默认的内置连接脚本, 可用ld –verbose查看. 连接选项-r和-N可以影响默认的连接脚本(如何影响?).</div>
+<div style="padding:0px; margin:0px">-T选项用以指定自己的链接脚本, 它将代替默认的连接脚本。你也可以使用以增加自定义的链接命令.</div>
+<div style="padding:0px; margin:0px">以下没有特殊说明，连接器指的是静态连接器.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">二、基本概念</span></div>
+<div style="padding:0px; margin:0px">链接器把一个或多个输入文件合成一个输出文件.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">输入文件</span>: 目标文件或链接脚本文件.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">输出文件</span>: 目标文件或可执行文件.</div>
+<div style="padding:0px; margin:0px">目标文件(包括可执行文件)具有固定的格式, 在UNIX或GNU/Linux平台下, 一般为ELF格式</div>
+<div style="padding:0px; margin:0px">有时把输入文件内的section称为输入section(input section), 把输出文件内的section称为输出section(output sectin).</div>
+<div style="padding:0px; margin:0px">目标文件的每个section至少包含两个信息: 名字和大小. 大部分section还包含与它相关联的一块数据, 称为section contents(section内容). 一个section可被标记为“loadable(可加载的)”或“allocatable(可分配的)”.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">loadable section</span>: 在输出文件运行时, 相应的section内容将被载入进程地址空间中.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">allocatable section</span>: 内容为空的section可被标记为“可分配的”. 在输出文件运行时, 在进程地址空间中空出大小同section指定大小的部分. 某些情况下, 这块内存必须被置零.</div>
+<div style="padding:0px; margin:0px">如果一个section不是“可加载的”或“可分配的”, 那么该section通常包含了调试信息. 可用objdump -h命令查看相关信息.</div>
+<div style="padding:0px; margin:0px">每个“可加载的”或“可分配的”输出section通常包含两个地址: VMA(virtual memory address虚拟内存地址或程序地址空间地址)和LMA(load memory address加载内存地址或进程地址空间地址). 通常VMA和LMA是相同的.</div>
+<div style="padding:0px; margin:0px">在目标文件中, loadable或allocatable的输出section有两种地址: VMA(virtual Memory Address)和LMA(Load Memory Address). VMA是执行输出文件时section所在的地址, 而LMA是加载输出文件时section所在的地址. 一般而言, 某section的VMA == LMA. 但在嵌入式系统中, 经常存在加载地址和执行地址不同的情况: 比如将输出文件加载到开发板的flash中(由LMA指定),
+ 而在运行时将位于flash中的输出文件复制到SDRAM中(由VMA指定).</div>
+<div style="padding:0px; margin:0px">可这样来理解VMA和LMA, 假设:</div>
+<div style="padding:0px; margin:0px">(1) .data section对应的VMA地址是0×08050000, 该section内包含了3个32位全局变量, i、j和k, 分别为1,2,3.</div>
+<div style="padding:0px; margin:0px">(2) .text section内包含由”printf( “j=%d “, j );”程序片段产生的代码.</div>
+<div style="padding:0px; margin:0px">连接时指定.data section的VMA为0×08050000, 产生的printf指令是将地址为0×08050004处的4字节内容作为一个整数打印出来。</div>
+<div style="padding:0px; margin:0px">如果.data section的LMA为0×08050000，显然结果是j=2</div>
+<div style="padding:0px; margin:0px">如果.data section的LMA为0×08050004，显然结果是j=1</div>
+<div style="padding:0px; margin:0px">还可这样理解LMA:</div>
+<div style="padding:0px; margin:0px">.text section内容的开始处包含如下两条指令(intel i386指令是10字节，每行对应5字节):</div>
+<div style="padding:0px; margin:0px">jmp 0×08048285</div>
+<div style="padding:0px; margin:0px">movl $0×1,%eax</div>
+<div style="padding:0px; margin:0px">如果.text section的LMA为0×08048280, 那么在进程地址空间内0×08048280处为“jmp 0×08048285”指令, 0×08048285处为movl $0×1,%eax指令. 假设某指令跳转到地址0×08048280, 显然它的执行将导致%eax寄存器被赋值为1.</div>
+<div style="padding:0px; margin:0px">如果.text section的LMA为0×08048285, 那么在进程地址空间内0×08048285处为“jmp 0×08048285”指令, 0×0804828a处为movl $0×1,%eax指令. 假设某指令跳转到地址0×08048285, 显然它的执行又跳转到进程地址空间内0×08048285处, 造成死循环.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">符号(symbol)</span>: 每个目标文件都有符号表(SYMBOL TABLE), 包含已定义的符号(对应全局变量和static变量和定义的函数的名字)和未定义符号(未定义的函数的名字和引用但没定义的符号)信息.</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">符号值</span>: 每个符号对应一个地址, 即符号值(这与c程序内变量的值不一样, 某种情况下可以把它看成变量的地址). 可用nm命令查看它们. (nm的使用方法可参考本blog的GNU binutils笔记)</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">三、 脚本格式</span></div>
+<div style="padding:0px; margin:0px">链接脚本由一系列命令组成, 每个命令由一个关键字(一般在其后紧跟相关参数)或一条对符号的赋值语句组成. 命令由分号‘<span style="padding:0px; margin:0px; font-weight:600">;</span>’分隔开.</div>
+<div style="padding:0px; margin:0px">文件名或格式名内如果包含分号’&nbsp;<span style="padding:0px; margin:0px; font-weight:600">;</span>'或其他分隔符, 则要用引号‘&nbsp;<span style="padding:0px; margin:0px; font-weight:600">”</span>’将名字全称引用起来. 无法处理含引号的文件名.</div>
+<div style="padding:0px; margin:0px">/* */之间的是注释。</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">四、 简单例子</span></div>
+<div style="padding:0px; margin:0px">在介绍链接描述文件的命令之前, 先看看下述的简单例子:</div>
+<div style="padding:0px; margin:0px">以下脚本将输出文件的text section定位在0×10000, data section定位在0×8000000:</div>
+<div style="padding:0px; margin:0px">SECTIONS</div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px">. = 0×10000;</div>
+<div style="padding:0px; margin:0px">.text : { *(.text) }</div>
+<div style="padding:0px; margin:0px">. = 0×8000000;</div>
+<div style="padding:0px; margin:0px">.data : { *(.data) }</div>
+<div style="padding:0px; margin:0px">.bss : { *(.bss) }</div>
+<div style="padding:0px; margin:0px">}</div>
+<div style="padding:0px; margin:0px">解释一下上述的例子:</div>
+<div style="padding:0px; margin:0px">. = 0×10000 : 把定位器符号置为0×10000 (若不指定, 则该符号的初始值为0).</div>
+<div style="padding:0px; margin:0px">.text : { *(.text) } : 将所有(*符号代表任意输入文件)输入文件的.text section合并成一个.text section, 该section的地址由定位器符号的值指定, 即0×10000.</div>
+<div style="padding:0px; margin:0px">. = 0×8000000 ：把定位器符号置为0×8000000</div>
+<div style="padding:0px; margin:0px">.data : { *(.data) } : 将所有输入文件的.data section合并成一个.data section, 该section的地址被置为0×8000000.</div>
+<div style="padding:0px; margin:0px">.bss : { *(.bss) } : 将所有输入文件的.bss section合并成一个.bss section，该section的地址被置为0×8000000+.data section的大小.</div>
+<div style="padding:0px; margin:0px">连接器每读完一个section描述后, 将定位器符号的值*增加*该section的大小. 注意: 此处没有考虑对齐约束.</div>
+</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">五、 简单脚本命令</span></div>
+<div style="padding:0px; margin:0px">ENTRY(SYMBOL) ：将符号SYMBOL的值设置成入口地址。</div>
+<div style="padding:0px; margin:0px">入口地址(entry point)是指进程执行的第一条用户空间的指令在进程地址空间的地址</div>
+<div style="padding:0px; margin:0px">ld有多种方法设置进程入口地址, 按一下顺序: (编号越前, 优先级越高)</div>
+<div style="padding:0px; margin:0px">1, ld命令行的-e选项</div>
+<div style="padding:0px; margin:0px">2, 连接脚本的ENTRY(SYMBOL)命令</div>
+<div style="padding:0px; margin:0px">3, 如果定义了start符号, 使用start符号值</div>
+<div style="padding:0px; margin:0px">4, 如果存在.text section, 使用.text section的第一字节的位置值</div>
+<div style="padding:0px; margin:0px">5, 使用值0</div>
+<div style="padding:0px; margin:0px">INCLUDE filename : 包含其他名为filename的链接脚本</div>
+<div style="padding:0px; margin:0px">相当于c程序内的的#include指令, 用以包含另一个链接脚本.</div>
+<div style="padding:0px; margin:0px">脚本搜索路径由-L选项指定. INCLUDE指令可以嵌套使用, 最大深度为10. 即: 文件1内INCLUDE文件2, 文件2内INCLUDE文件3… , 文件10内INCLUDE文件11. 那么文件11内不能再出现 INCLUDE指令了.</div>
+<div style="padding:0px; margin:0px">INPUT(files): 将括号内的文件做为链接过程的输入文件</div>
+<div style="padding:0px; margin:0px">ld首先在当前目录下寻找该文件, 如果没找到, 则在由-L指定的搜索路径下搜索. file可以为 -lfile形式，就象命令行的-l选项一样. 如果该命令出现在暗含的脚本内, 则该命令内的file在链接过程中的顺序由该暗含的脚本在命令行内的顺序决定.</div>
+<div style="padding:0px; margin:0px">GROUP(files) : 指定需要重复搜索符号定义的多个输入文件</div>
+<div style="padding:0px; margin:0px">file必须是库文件, 且file文件作为一组被ld重复扫描，直到不在有新的未定义的引用出现。</div>
+<div style="padding:0px; margin:0px">OUTPUT(FILENAME) : 定义输出文件的名字</div>
+<div style="padding:0px; margin:0px">同ld的-o选项, 不过-o选项的优先级更高. 所以它可以用来定义默认的输出文件名. 如a.out</div>
+<div style="padding:0px; margin:0px">SEARCH_DIR(PATH) ：定义搜索路径，</div>
+<div style="padding:0px; margin:0px">同ld的-L选项, 不过由-L指定的路径要比它定义的优先被搜索。</div>
+<div style="padding:0px; margin:0px">STARTUP(filename) : 指定filename为第一个输入文件</div>
+<div style="padding:0px; margin:0px">在链接过程中, 每个输入文件是有顺序的. 此命令设置文件filename为第一个输入文件。</div>
+<div style="padding:0px; margin:0px">OUTPUT_FORMAT(BFDNAME) : 设置输出文件使用的BFD格式</div>
+<div style="padding:0px; margin:0px">同ld选项-o format BFDNAME, 不过ld选项优先级更高.</div>
+<div style="padding:0px; margin:0px">OUTPUT_FORMAT(DEFAULT,BIG,LITTLE) : 定义三种输出文件的格式(大小端)</div>
+<div style="padding:0px; margin:0px">若有命令行选项-EB, 则使用第2个BFD格式; 若有命令行选项-EL，则使用第3个BFD格式.否则默认选第一个BFD格式.</div>
+<div style="padding:0px; margin:0px">TARGET(BFDNAME)：设置输入文件的BFD格式</div>
+<div style="padding:0px; margin:0px">同ld选项-b BFDNAME. 若使用了TARGET命令, 但未使用OUTPUT_FORMAT命令, 则最用一个TARGET命令设置的BFD格式将被作为输出文件的BFD格式.</div>
+<div style="padding:0px; margin:0px">ASSERT(EXP, MESSAGE)：如果EXP不为真，终止连接过程</div>
+<div style="padding:0px; margin:0px">EXTERN(SYMBOL SYMBOL …)：在输出文件中增加未定义的符号，如同连接器选项-u</div>
+<div style="padding:0px; margin:0px">FORCE_COMMON_ALLOCATION：为common symbol(通用符号)分配空间，即使用了-r连接选项也为其分配</div>
+<div style="padding:0px; margin:0px">NOCROSSREFS(SECTION SECTION …)：检查列出的输出section，如果发现他们之间有相互引用，则报错。对于某些系统，特别是内存较紧张的嵌入式系统，某些section是不能同时存在内存中的，所以他们之间不能相互引用。</div>
+<div style="padding:0px; margin:0px">OUTPUT_ARCH(BFDARCH)：设置输出文件的machine architecture(体系结构)，BFDARCH为被BFD库使用的名字之一。可以用命令objdump -f查看。</div>
+<div style="padding:0px; margin:0px">可通过 man -S 1 ld查看ld的联机帮助, 里面也包括了对这些命令的介绍.</div>
+</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">六、 对符号的赋值</span></div>
+<div style="padding:0px; margin:0px">在目标文件内定义的符号可以在链接脚本内被赋值. (注意和C语言中赋值的不同!) 此时该符号被定义为全局的. 每个符号都对应了一个地址, 此处的赋值是更改这个符号对应的地址.</div>
+<div style="padding:0px; margin:0px">举例. 通过下面的程序查看变量a的地址:</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">a.c文件</span></div>
+<div style="padding:0px; margin:0px">/* a.c */</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px">#include &lt;stdio.h&gt;</div>
+<div style="padding:0px; margin:0px">int&nbsp;<span style="padding:0px; margin:0px; color:rgb(51,102,255)">a = 100;</span></div>
+<div style="padding:0px; margin:0px">int main()</div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px">printf( "&amp;a=%p\n", &amp;a );</div>
+<div style="padding:0px; margin:0px">return 0;</div>
+<div style="padding:0px; margin:0px">}</div>
+</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">a.lds文件</span></div>
+<div style="padding:0px; margin:0px">/* a.lds */</div>
+<div style="padding:0px; margin:0px">a = 3;</div>
+<div style="padding:0px; margin:0px">编译命令：</div>
+<div style="padding:0px; margin:0px">$ gcc -Wall -o a-without-lds.exe a.c</div>
+<div style="padding:0px; margin:0px">运行结果：</div>
+<div style="padding:0px; margin:0px">&amp;a = 0×601020</div>
+<div style="padding:0px; margin:0px">编译命令：</div>
+<div style="padding:0px; margin:0px">$ gcc -Wall -o a-with-lds.exe a.c a.lds</div>
+<div style="padding:0px; margin:0px">运行结果：</div>
+<div style="padding:0px; margin:0px">&amp;a = 0×3</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">注意</span>: 对符号的赋值只对全局变量起作用!</div>
+<div style="padding:0px; margin:0px">对于一些简单的赋值语句，我们可以使用任何c语言语法的赋值操作:</div>
+<div style="padding:0px; margin:0px">SYMBOL = EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL += EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL -= EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL *= EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL /= EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL &gt;= EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL &amp;= EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">SYMBOL |= EXPRESSION ;</div>
+<div style="padding:0px; margin:0px">除了第一类表达式外, 使用其他表达式需要SYMBOL已经被在某目标文件的源码中被定义。</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.&nbsp;</span>是一个特殊的符号，它是定位器，一个位置指针，指向程序地址空间内的某位置(或某section内的偏移，如果它在SECTIONS命令内的某section描述内)，该符号只能在SECTIONS命令内使用。</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">注意</span>：赋值语句包含4个语法元素：符号名、操作符、表达式、分号；一个也不能少。</div>
+<div style="padding:0px; margin:0px">被赋值后，符号所属的section被设值为表达式EXPRESSION所属的SECTION(参看11. 脚本内的表达式)</div>
+<div style="padding:0px; margin:0px">赋值语句可以出现在连接脚本的三处地方：SECTIONS命令内，SECTIONS命令内的section描述内和全局位置。</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">示例1</span>：</div>
+<div style="padding:0px; margin:0px">floating_point = 0; /* 全局位置 */</div>
+<div style="padding:0px; margin:0px">SECTIONS</div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px">.text :</div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px">*(.text)</div>
+<div style="padding:0px; margin:0px">_etext =&nbsp;<span style="padding:0px; margin:0px; font-weight:600">.</span>; /* section描述内 */</div>
+<div style="padding:0px; margin:0px">}</div>
+<div style="padding:0px; margin:0px">_bdata = (. + 3) &amp; ~ 4; /* SECTIONS命令内 */</div>
+<div style="padding:0px; margin:0px">.data : { *(.data) }</div>
+<div style="padding:0px; margin:0px">}</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">PROVIDE关键字</span></div>
+<div style="padding:0px; margin:0px">该关键字用于定义这类符号：在目标文件内被引用，但没有在任何目标文件内被定义的符号。</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">示例2</span>：</div>
+<div style="padding:0px; margin:0px">SECTIONS</div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px">.text :</div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px">*(.text)</div>
+<div style="padding:0px; margin:0px">_etext = .;</div>
+<div style="padding:0px; margin:0px">PROVIDE(etext =&nbsp;<span style="padding:0px; margin:0px; font-weight:600">.</span>);</div>
+<div style="padding:0px; margin:0px">}</div>
+<div style="padding:0px; margin:0px">}</div>
+<div style="padding:0px; margin:0px">这里，当目标文件内引用了etext符号，却没有定义它时，etext符号对应的地址被定义为.text section之后的第一个字节的地址。</div>
+<div style="padding:0px; margin:0px"><br>
+</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600"><span style="font-size:14px; padding:0px; margin:0px">七、 SECTIONS命令</span></span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#003366; padding:0px; margin:0px">命令告诉ld如何把输入文件的sections映射到输出文件的各个section: 如何将输入section合为输出section; 如何把输出section放入程序地址空间(VMA)和进程地址空间(LMA).</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+该命令格式如下:</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">SECTIONS-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">SECTIONS-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+SECTION-COMMAND有四种:</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">(1)</span>&nbsp;<span style="color:#000080; padding:0px; margin:0px">ENTRY命令</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">(2)</span>&nbsp;<span style="color:#000080; padding:0px; margin:0px">符号赋值语句</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">(3)</span><span style="color:#000080; padding:0px; margin:0px">&nbsp;一个输出section的描述</span>(output section description)</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">(4)</span>&nbsp;<span style="color:#003366; padding:0px; margin:0px">一个section叠加描述</span>(overlay description)</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">如果整个连接脚本内没有SECTIONS命令, 那么ld将所有同名输入section合成为一个输出section内, 各输入section的顺序为它们被连接器发现的顺序.</span>如果某输入section没有在SECTIONS命令中提到, 那么该section将被直接拷贝成输出section。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1、输出section描述（基本）</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+输出section描述具有如下格式:</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTION-NAME</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;[</span><span style="color:#99cc00; padding:0px; margin:0px">ADDRESS</span><span style="color:#0000ff; padding:0px; margin:0px">] [(</span><span style="color:#808000; padding:0px; margin:0px">TYPE</span><span style="color:#0000ff; padding:0px; margin:0px">)]&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">:</span></span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;[</span><span style="color:#339966; padding:0px; margin:0px">AT</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#008000; padding:0px; margin:0px">LMA</span><span style="color:#0000ff; padding:0px; margin:0px">)]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">} [</span><span style="color:#008080; padding:0px; margin:0px">&gt;REGION</span><span style="color:#0000ff; padding:0px; margin:0px">] [AT&gt;LMA_REGION] [:PHDR HDR ...] [=</span><span style="color:#99cc00; padding:0px; margin:0px">FILLEXP</span><span style="color:#0000ff; padding:0px; margin:0px">]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#99cc00; padding:0px; margin:0px">[ ]</span>内的内容为可选选项, 一般不需要.</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTION-NAME</span>：section名字.<span style="color:#993300; padding:0px; margin:0px">SECTION-NAME</span>左右的空白、圆括号、冒号是必须的，换行符和其他空格是可选的。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1.1、输出section名字</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+输出section名字<span style="padding:0px; margin:0px; color:rgb(153,51,0)">SECTION-NAME</span><span style="color:#003366; padding:0px; margin:0px">必须符合输出文件格式要求</span>，比如：<span style="color:#000080; padding:0px; margin:0px">a.out格式的文件只允许存在.text、.data和.bss section名</span>。<span style="color:#000080; padding:0px; margin:0px">而有的格式只允许存在</span><span style="color:#0000ff; padding:0px; margin:0px">数字名字</span><span style="color:#000080; padding:0px; margin:0px">，那么此时应该用引号将所有名字内的数字组合在一起；另外，还有一些格式允许任何序列的字符存在于section名字内，此时如果名字内包含特殊字符(比如空格、逗号等)，那么需要用引号将其组合在一起。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1.2、输出section地址</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; line-height:22px">输出section地址</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">[</span><span style="color:#99cc00; padding:0px; margin:0px; line-height:22px">ADDRESS</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">]</span><span style="color:#003366; padding:0px; margin:0px">是一个表达式，它的值用于设置</span><span style="color:#0000ff; padding:0px; margin:0px">VMA</span><span style="color:#003366; padding:0px; margin:0px">。如果没有该选项且有</span><span style="color:#008080; padding:0px; margin:0px">REGION</span><span style="color:#003366; padding:0px; margin:0px">选项，那么连接器将根据</span><span style="color:#008080; padding:0px; margin:0px">REGION</span><span style="color:#003366; padding:0px; margin:0px">设置</span><span style="color:#0000ff; padding:0px; margin:0px">VMA</span><span style="color:#003366; padding:0px; margin:0px">；如果也没有</span><span style="color:#008080; padding:0px; margin:0px">REGION</span><span style="color:#003366; padding:0px; margin:0px">选项，那么连接器将根据定位符号‘</span><span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.</span></span><span style="color:#003366; padding:0px; margin:0px">’的值设置该section的</span><span style="color:#0000ff; padding:0px; margin:0px">VMA</span><span style="color:#003366; padding:0px; margin:0px">，将定位符号的值调整到满足输出section对齐要求后的值，这时输出
+ section的对齐要求为：</span><span style="color:#000080; padding:0px; margin:0px">该输出section描述内用到的所有输入section的对齐要求中</span><span style="color:#0000ff; padding:0px; margin:0px">最严格</span><span style="color:#000080; padding:0px; margin:0px">的对齐要求</span><span style="color:#003366; padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">例子</span>：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.&nbsp;</span></span><span style="color:#0000ff; padding:0px; margin:0px">:</span><span style="color:#99cc00; padding:0px; margin:0px">&nbsp;{
+ *(.text) }</span>和<span style="color:#993300; padding:0px; margin:0px">.text</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">: { *(.text) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+这两个描述是截然不同的，第一个将.text section的VMA设置为定位符号的值，而第二个则是设置成定位符号的修调值，满足对齐要求后的。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">ADDRESS</span><span style="color:#003366; padding:0px; margin:0px">可以是一个任意表达式，比如，</span><span style="color:#0000ff; padding:0px; margin:0px">ALIGN(0×10)</span><span style="color:#000080; padding:0px; margin:0px">这将把该section的VMA设置成定位符号的修调值，满足</span><span style="color:#0000ff; padding:0px; margin:0px">16</span><span style="color:#000080; padding:0px; margin:0px">字节对齐后的</span><span style="color:#003366; padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>：设置ADDRESS值，将更改定位符号的值。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1.3、输出section描述</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; color:rgb(0,51,102)">输出section描述</span>OUTPUT-SECTION-COMMAND为以下四种之一：
+<div style="padding:0px; margin:0px; line-height:22px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)">(1).</span><span style="color:#0000ff; padding:0px; margin:0px">符号赋值语句</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)">(2).</span><span style="color:#0000ff; padding:0px; margin:0px">输入section描述</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)">(3).</span><span style="color:#0000ff; padding:0px; margin:0px">直接包含的数据值</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)">(4).</span><span style="color:#0000ff; padding:0px; margin:0px">一些特殊的输出section关键字</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="padding:0px; margin:0px; font-weight:600"><span style="padding:0px; margin:0px">7.1.3.1、</span>符号赋值语</span></div>
+<span style="color:#993300; padding:0px; margin:0px">符号赋值语句</span><span style="color:#003366; padding:0px; margin:0px">已经在《</span><span style="padding:0px; margin:0px; line-height:24px; font-family:arial,helvetica,simsun,u5b8bu4f53; white-space:nowrap"><strong><a target="_blank" title="阅读全文" href="http://hubingforever.blog.163.com/blog/static/171040579201192472552886/" style="padding:0px; margin:0px; color:rgb(207,121,28); outline:0px; font-size:12px; text-decoration:none">Linux下的lds链接脚本基础（一）</a></strong></span><span style="padding:0px; margin:0px; color:rgb(0,51,102)">》前文介绍过，这里就不累述。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1.3.2、输入section描述</span>：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">最常见的输出section描述命令是</span><span style="color:#993300; padding:0px; margin:0px">输入section描述</span><span style="color:#003366; padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+输入section描述基本语法：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">FILENAME</span><span style="color:#0000ff; padding:0px; margin:0px">([</span><span style="color:#993300; padding:0px; margin:0px">EXCLUDE_FILE&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#339966; padding:0px; margin:0px">FILENAME1</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#008000; padding:0px; margin:0px">FILENAME2&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">...)&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">SECTION1</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#808000; padding:0px; margin:0px">SECTION2</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;...)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">FILENAME</span>文件名，可以是一个特定的文件的名字，也可以是一个字符串模式。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#99cc00; padding:0px; margin:0px">SECTION</span>名字，可以是一个特定的section名字，也可以是一个字符串模式</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+例子是最能说明问题的，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">*</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.text</span><span style="color:#0000ff; padding:0px; margin:0px">)</span>&nbsp;：表示所有输入文件的.text
+ section</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#ff6600; padding:0px; margin:0px">*</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#993300; padding:0px; margin:0px">EXCLUDE_FILE</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;(</span><span style="color:#339966; padding:0px; margin:0px">*crtend.o</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#008000; padding:0px; margin:0px">*otherfile.o</span><span style="color:#0000ff; padding:0px; margin:0px">)&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">.ctors</span><span style="color:#0000ff; padding:0px; margin:0px">))&nbsp;</span>：表示除crtend.o、otherfile.o文件外的所有输入文件的.ctors
+ section。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">data.o</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.data</span><span style="color:#0000ff; padding:0px; margin:0px">)</span>&nbsp;：表示data.o文件的.data
+ section</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">data.o</span>&nbsp;：表示data.o文件的所有section</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">*</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.text</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#808000; padding:0px; margin:0px">.data</span><span style="color:#0000ff; padding:0px; margin:0px">)</span>&nbsp;：表示所有文件的.text
+ section和.data section，顺序是：<span style="color:#000080; padding:0px; margin:0px">第一个文件的.text section，第一个文件的.data section，第二个文件的.text section，第二个文件的.data section，...</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">*</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.text</span><span style="color:#0000ff; padding:0px; margin:0px">)&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">*</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#808000; padding:0px; margin:0px">.data</span><span style="color:#0000ff; padding:0px; margin:0px">)&nbsp;</span>：表示所有文件的.text
+ section和.data section，顺序是：<span style="color:#000080; padding:0px; margin:0px">第一个文件的.text section，第二个文件的.text section，...，最后一个文件的.text section，第一个文件的.data section，第二个文件的.data section，...，最后一个文件的.data section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+下面看连接器是如何找到对应的文件的。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">当</span><span style="color:#ff6600; padding:0px; margin:0px">FILENAME</span><span style="color:#000080; padding:0px; margin:0px">是一个特定的文件名时，连接器会查看它是否在连接命令行内出现或在INPUT命令中出现。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">当</span><span style="color:#ff6600; padding:0px; margin:0px">FILENAME</span><span style="color:#000080; padding:0px; margin:0px">是一个字符串模式时，连接器仅仅只查看它是否在连接命令行内出现。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>：如果连接器发现某文件在INPUT命令内出现，那么它会在-L指定的路径内搜寻该文件。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">字符串模式内可存在以下通配符：</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">*&nbsp;</span>：表示任意多个字符</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">?&nbsp;</span>：表示任意一个字符</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">[CHARS]</span>&nbsp;：表示任意一个CHARS内的字符，可用-号表示范围，如：a-z</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">：</span>表示引用下一个紧跟的字符</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">在文件名内，通配符不匹配文件夹分隔符/，但当字符串模式仅包含通配符*时除外。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">任何一个文件的任意section只能在SECTIONS命令内出现一次。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+看如下<span style="padding:0px; margin:0px; font-weight:600">例子</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">.data&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px">:</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{ *(.data) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">.data1&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px">:</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{ data.o(.data) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+data.o 文件的.data section在第一个OUTPUT-SECTION-COMMAND命令内被使用了，那么在第二个OUTPUT-SECTION-COMMAND命令内将不会再被使用，也就是说即使连接器不报错，输出文件的.data1 section的内容也是空的。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+再次强调：<span style="color:#000080; padding:0px; margin:0px">连接器依次扫描每个OUTPUT-SECTION-COMMAND命令内的文件名，任何一个文件的任何一个section都只能使用一次</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+读者可以用-M连接命令选项来产生一个map文件，它包含了所有输入section到输出section的组合信息。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+再看个<span style="padding:0px; margin:0px; font-weight:600">例子</span>，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;: { *(.text) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.DATA</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;: { [A-Z]*(.data) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.data&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">: { *(.data) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.bss&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">: { *(.bss) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+这个例子中说明，所有文件的输入.text section组成输出.text section；所有以大写字母开头的文件的.data section组成输出.DATA section，其他文件的.data section组成输出.data section；所有文件的输入.bss section组成输出.bss section。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">可以用SORT()关键字对满足字符串模式的所有名字进行递增排序</span>，如<span style="color:#0000ff; padding:0px; margin:0px">SORT(.text*)</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">通用符号(common symbol)的输入section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在许多目标文件格式中，通用符号并没有占用一个section。连接器认为：输入文件的所有通用符号在名为COMMON的section内。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+例子，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.bss</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{ *(.bss) *(COMMON) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+这个例子中将所有输入文件的所有通用符号放入输出.bss section内。可以看到<span style="color:#000080; padding:0px; margin:0px">COMMOM section的使用方法跟其他section的使用方法是一样的。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">有些目标文件格式把通用符号分成几类</span>。例如，在MIPS elf目标文件格式中，把通用符号分成standard common symbols(标准通用符号)和small common symbols(微通用符号，不知道这么译对不对？)，<span style="color:#000080; padding:0px; margin:0px">此时连接器认为所有standard common symbols在COMMON
+ section内，而small common symbols在.scommon section内</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+在一些以前的连接脚本内可以看见[COMMON]，相当于*(COMMON)，不建议继续使用这种陈旧的方式。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">输入section和垃圾回收</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在连接命令行内使用了选项–gc-sections后，连接器可能将某些它认为没用的section过滤掉，此时就有必要强制连接器保留一些特定的 section，可用</span><span style="color:#ff00ff; padding:0px; margin:0px">KEEP()</span><span style="color:#003366; padding:0px; margin:0px">关键字达此目的。如</span><span style="color:#ff00ff; padding:0px; margin:0px">KEEP</span><span style="color:#0000ff; padding:0px; margin:0px">(*(.text))或KEEP(SORT(*)(.text))</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+最后我们看个简单的输入section相关例子：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">outputa</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#339966; padding:0px; margin:0px">0×10000</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">all.o</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">foo.o&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.input1</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">outputb</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">foo.o</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;(</span><span style="color:#99cc00; padding:0px; margin:0px">.input2</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">foo1.o</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;(</span><span style="color:#99cc00; padding:0px; margin:0px">.input1</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">outputc</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">*</span><span style="color:#3366ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.input1</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">*</span><span style="color:#3366ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">.input2</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+本例中，将<span style="color:#ff9900; padding:0px; margin:0px">all.o</span>文件的所有section和<span style="color:#ff9900; padding:0px; margin:0px">foo.o</span>文件的所有(一个文件内可以有多个同名section)<span style="color:#99cc00; padding:0px; margin:0px">.input1</span>&nbsp;section依次放入输出<span style="color:#ff6600; padding:0px; margin:0px">outputa</span>&nbsp;section内，该section的VMA是<span style="color:#99cc00; padding:0px; margin:0px">0×10000</span>；将<span style="color:#ff9900; padding:0px; margin:0px">foo.o</span>文件的所有<span style="color:#99cc00; padding:0px; margin:0px">.input2</span>&nbsp;section和<span style="color:#ff9900; padding:0px; margin:0px">foo1.o</span>文件的所有<span style="color:#99cc00; padding:0px; margin:0px">.input1</span>section依次放入输出<span style="color:#ff6600; padding:0px; margin:0px">outputb</span>&nbsp;section内，该section的VMA是当前定位器符号的修调值(对齐后)；将其他文件(非<span style="color:#99cc00; padding:0px; margin:0px">all.o</span>、<span style="color:#99cc00; padding:0px; margin:0px">foo.o</span>、<span style="color:#99cc00; padding:0px; margin:0px">foo1.o</span>)文件的<span style="color:#99cc00; padding:0px; margin:0px">.
+ input1</span>&nbsp;section和<span style="color:#99cc00; padding:0px; margin:0px">.input2</span>&nbsp;section放入输出<span style="color:#ff6600; padding:0px; margin:0px">outputc</span>&nbsp;section内。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1.3.3、直接包含数据值</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">可以显示地在输出section内填入你想要填入的信息</span>(这样是不是可以自己通过连接脚本写程序？当然是简单的程序)。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">BYTE</span>(EXPRESSION) 1 字节</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SHORT</span>(EXPRESSION) 2 字节</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">LOGN</span>(EXPRESSION) 4 字节</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">QUAD</span>(EXPRESSION) 8 字节</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SQUAD</span>(EXPRESSION) 64位处理器的代码时，8 字节</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">输出文件的字节顺序big endianness 或little endianness，可以由输出目标文件的格式决定；如果输出目标文件的格式不能决定字节顺序，那么字节顺序与第一个输入文件的字节顺序相同。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">如</span>：<span style="color:#0000ff; padding:0px; margin:0px">BYTE(1)</span>、<span style="color:#0000ff; padding:0px; margin:0px">LANG(addr)</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>，这些命令只能放在输出section描述内，其他地方不行。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">错误</span>：<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{ .text</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;:</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">{</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;*(.text)</span><span style="color:#ff6600; padding:0px; margin:0px">&nbsp;}</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;LONG(1)</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;.data</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;:</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{
+ *(.data) } }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">正确</span>：<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{ .text&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px">:</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">{</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;*(.text)
+ LONG(1)&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">}</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;.data&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px">:</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{
+ *(.data) } }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在当前输出section内可能存在未描述的存储区域(比如由于对齐造成的空隙)，可以用</span><span style="color:#ff00ff; padding:0px; margin:0px">FILL</span><span style="color:#003366; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">EXPRESSION</span><span style="color:#003366; padding:0px; margin:0px">)命令决定这些存储区域的内容，
+ EXPRESSION的前两字节有效，这两字节在必要时可以重复被使用以填充这类存储区域。如FILE(0×9090)。在输出section描述中可以有</span><span style="color:#ff6600; padding:0px; margin:0px">=FILEEXP</span><span style="color:#003366; padding:0px; margin:0px">属性，它的作用如同FILE()命令，但是FILE命令只作用于该FILE指令之后的section区域，而</span><span style="color:#ff00ff; padding:0px; margin:0px">=FILEEXP</span><span style="color:#003366; padding:0px; margin:0px">属性作用于整个输出section区域，且FILE命令的优先级更高！！！</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.1.3.4、特殊的输出section关键字</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在输出section描述OUTPUT-SECTION-COMMAND中还可以使用一些特殊的输出section关键字。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">CREATE_OBJECT_SYMBOLS</span>&nbsp;：为每个输入文件建立一个符号，符号名为输入文件的名字。每个符号所在的section是出现该关键字的section。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">CONSTRUCTORS</span>&nbsp;：与c++内的(全局对象的)构造函数和(全局对像的)析构函数相关，下面将它们简称为<span style="color:#0000ff; padding:0px; margin:0px">全局构造</span>和<span style="color:#0000ff; padding:0px; margin:0px">全局析构</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">对于a.out目标文件格式，连接器用一些不寻常的方法实现c++的全局构造和全局析构。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">当连接器生成的目标文件格式</span><span style="color:#0000ff; padding:0px; margin:0px">不支持任意section名字时</span><span style="color:#003366; padding:0px; margin:0px">，比如说</span><span style="color:#0000ff; padding:0px; margin:0px">ECOFF</span><span style="color:#003366; padding:0px; margin:0px">、</span><span style="color:#0000ff; padding:0px; margin:0px">XCOFF</span><span style="color:#003366; padding:0px; margin:0px">格式，连接器将通过名字来识别全局构造和全局析构，对于这些文件格式，</span><span style="color:#000080; padding:0px; margin:0px">连接器把与全局构造和全局析构的相关信息放入出现
+ CONSTRUCTORS关键字的输出section内</span><span style="color:#003366; padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">符号</span><span style="color:#993300; padding:0px; margin:0px">__CTORS_LIST__</span><span style="color:#000080; padding:0px; margin:0px">表示全局构造信息的的开始处，</span><span style="color:#993300; padding:0px; margin:0px">__CTORS_END__</span><span style="color:#000080; padding:0px; margin:0px">表示全局构造信息的结束处。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">符号</span><span style="color:#993300; padding:0px; margin:0px">__DTORS_LIST__</span><span style="color:#000080; padding:0px; margin:0px">表示全局构造信息的的开始处，</span><span style="color:#993300; padding:0px; margin:0px">__DTORS_END__</span><span style="color:#000080; padding:0px; margin:0px">表示全局构造信息的结束处。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">这两块信息的开始处是一字长的信息，表示该块信息有多少项数据，然后以值为零的一字长数据结束。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+一般来说，GNU C++在函数__main内安排全局构造代码的运行，而__main函数被初始化代码(在main函数调用之前执行)调用。是不是对于某些目标文件格式才这样？？？</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+对于支<span style="color:#0000ff; padding:0px; margin:0px">持任意section名的目标文件格式</span>，比如COFF、ELF格式，GNU C++将全局构造和全局析构信息分别放入<span style="color:#99cc00; padding:0px; margin:0px">.ctors</span>section和<span style="color:#99cc00; padding:0px; margin:0px">.dtors</span>&nbsp;section内，然后在连接脚本内加入如下，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">__CTOR_LIST__&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">= .;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">LONG</span><span style="color:#3366ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">(__CTOR_END__ – __CTOR_LIST__) / 4 – 2</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#99cc00; padding:0px; margin:0px">*(.ctors)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">LONG</span><span style="color:#3366ff; padding:0px; margin:0px">(0)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">__CTOR_END__&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">= .;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#800000; padding:0px; margin:0px">__DTOR_LIST__</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;= .;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">LONG</span><span style="color:#3366ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">(__DTOR_END__ – __DTOR_LIST__) / 4 – 2</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#99cc00; padding:0px; margin:0px">*(.dtors)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">LONG</span><span style="color:#3366ff; padding:0px; margin:0px">(0)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#800000; padding:0px; margin:0px">__DTOR_END__</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;= .;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+如果使用GNU C++提供的初始化优先级支持(它能控制每个全局构造函数调用的先后顺序)，那么<span style="color:#000080; padding:0px; margin:0px">请在连接脚本内把CONSTRUCTORS替换成SORT (CONSTRUCTS)，把*(.ctors)换成*(SORT(.ctors))，把*(.dtors)换成*(SORT(.dtors))</span>。一般来说，默认的连接脚本已作好的这些工作。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">修改定位器</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">我们可以对定位器符合。进行赋值来修改定位器的值。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">示例</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px"><span style="color:#ff6600; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px">{</div>
+<div style="padding:0px; margin:0px"><span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.&nbsp;</span></span><span style="color:#0000ff; padding:0px; margin:0px">= SIZEOF_HEADERS;</span></div>
+<div style="padding:0px; margin:0px">.text : { *(.text) }</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600"><span style="color:#ff00ff; padding:0px; margin:0px">.&nbsp;</span></span><span style="color:#0000ff; padding:0px; margin:0px">= 0×10000;</span></div>
+<div style="padding:0px; margin:0px">.data : { *(.data) }</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600"><span style="color:#ff00ff; padding:0px; margin:0px">.&nbsp;</span></span><span style="color:#0000ff; padding:0px; margin:0px">= 0×8000000;</span></div>
+<div style="padding:0px; margin:0px">.bss : { *(.bss) }</div>
+<div style="padding:0px; margin:0px">}</div>
+</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">输出section的丢弃</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+对于<span style="color:#0000ff; padding:0px; margin:0px">.foo： { *(.foo) }</span>，如果没有任何一个输入文件包含.foo section，那么连接器将不会创建.foo输出section。但是如果在这些输出section描述内包含了非输入section描述命令(如符号赋值语句)，那么连接器将总是创建该输出section。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">另外，有一个特殊的输出section，名为</span><span style="color:#ff6600; padding:0px; margin:0px">/DISCARD/</span><span style="color:#003366; padding:0px; margin:0px">，</span><span style="color:#000080; padding:0px; margin:0px">被该section引用的任何输入section将不会出现在输出文件内</span><span style="color:#003366; padding:0px; margin:0px">，这就是DISCARD的意思吧。</span>如果/DISCARD/
+ section被它自己引用呢？想想看。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600"><span style="padding:0px; margin:0px; font-weight:normal"><span style="padding:0px; margin:0px; font-weight:600; line-height:22px">7.2、输出section描述（进阶）</span></span></span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+我们再回顾以下输出section描述的文法：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#993300; padding:0px; margin:0px">SECTION-NAME</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;[</span><span style="color:#99cc00; padding:0px; margin:0px">ADDRESS</span><span style="color:#0000ff; padding:0px; margin:0px">]
+ [(</span><span style="color:#808000; padding:0px; margin:0px">TYPE</span><span style="color:#0000ff; padding:0px; margin:0px">)]&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">:</span></span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;[</span><span style="color:#339966; padding:0px; margin:0px">AT</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#008000; padding:0px; margin:0px">LMA</span><span style="color:#0000ff; padding:0px; margin:0px">)]</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#0000ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#0000ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#0000ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#0000ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#0000ff; padding:0px; margin:0px">} [&gt;REGION] [AT&gt;LMA_REGION] [</span><span style="color:#339966; padding:0px; margin:0px">:</span><span style="color:#003300; padding:0px; margin:0px">PHDR
+ HDR ...</span><span style="color:#0000ff; padding:0px; margin:0px">] [=</span><span style="color:#99cc00; padding:0px; margin:0px">FILLEXP</span><span style="color:#0000ff; padding:0px; margin:0px">]</span></div>
+</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+前面我们介绍了<span style="color:#993300; padding:0px; margin:0px">SECTION</span>、<span style="color:#99cc00; padding:0px; margin:0px">ADDRESS</span>、<span style="color:#0000ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span>相关信息，下面我们将介绍其他属性。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.2.1、输出section的类型</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">可以通过</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">[(</span><span style="color:#808000; padding:0px; margin:0px; line-height:22px">TYPE</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">)]</span><span style="color:#003366; padding:0px; margin:0px">设置输出section的类型</span>。<span style="color:#000080; padding:0px; margin:0px">如果没有指定TYPE类型，那么连接器根据输出section引用的输入section的类型设置该输出section的类型</span>。它可以为以下五种值，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">NOLOAD</span>&nbsp;：该section在程序运行时，不被载入内存。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">DSECT,COPY,INFO,OVERLAY</span>&nbsp;：这些类型很少被使用，为了向后兼容才被保留下来。这种类型的section必须被标记为“<span style="color:#0000ff; padding:0px; margin:0px">不可加载的</span>”，以便在程序运行不为它们分配内存。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+默认值是多少呢？Puzzle!</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.2.2、输出section的LMA</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">默认情况下，LMA等于VMA，但可以通过</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">[</span><span style="color:#339966; padding:0px; margin:0px; line-height:22px">AT</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">(</span><span style="color:#008000; padding:0px; margin:0px; line-height:22px">LMA</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">)]</span><span style="color:#003366; padding:0px; margin:0px">项，即关键字</span><span style="color:#339966; padding:0px; margin:0px">AT()</span><span style="color:#003366; padding:0px; margin:0px">指定LMA</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">用关键字AT()指定，括号内包含表达式，表达式的值用于设置LMA。如果不用AT()关键字，那么可用</span><span style="color:#0000ff; padding:0px; margin:0px">AT&gt;</span><span style="color:#99cc00; padding:0px; margin:0px">LMA_REGION</span>表<span style="color:#000080; padding:0px; margin:0px">达式设置指定该section加载地址的范围。这个属性主要用于构件ROM境象。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">例子</span>，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text</span>&nbsp;0×1000 : {<span style="color:#ff9900; padding:0px; margin:0px; line-height:22px">_etext</span><span style="color:#ff99cc; padding:0px; margin:0px; line-height:22px">&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">=
+ . ;</span><span style="color:#0000ff; padding:0px; margin:0px">*(.text)</span><span style="color:#3366ff; padding:0px; margin:0px">;</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span>}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.mdata</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">0×2000</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#99cc00; padding:0px; margin:0px">AT</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;(&nbsp;</span><span style="color:#008000; padding:0px; margin:0px">ADDR (.text) + SIZEOF (.text)&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_data</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;= .</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;;&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">*(.data)</span><span style="color:#3366ff; padding:0px; margin:0px">;</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_edata&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">=
+ .</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;; }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.bss&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">0×3000</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_bstart&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">= .</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;;</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;*(.bss)
+ *(COMMON)</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;; _bend</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;= .</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;;}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+程序如下，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">extern char</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_etext</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_data</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_edata</span><span style="color:#3366ff; padding:0px; margin:0px">,&nbsp;</span><span style="color:#ff9900; padding:0px; margin:0px">_bstart</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;_bend</span><span style="color:#3366ff; padding:0px; margin:0px">;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">char *src = &amp;_etext;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">char *dst = &amp;_data;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#808080; padding:0px; margin:0px">/* ROM has data at end of text; copy it. */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">while (dst rom }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.2.3、设置输出section所在的程序段</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">可以通过</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">[</span><span style="color:#339966; padding:0px; margin:0px; line-height:22px">:</span><span style="color:#003300; padding:0px; margin:0px; line-height:22px">PHDR
+ HDR ...</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">]</span><span style="color:#003366; padding:0px; margin:0px">项将输出section放入预先定义的程序段(program segment)内。如果某个输出section设置了它所在的一个或多个程序段，那么接下来定义的输出section的默认程序段与该输出 section的相同。除非再次显示地指定</span>。例子，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">PHDRS</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;{</span><span style="color:#99cc00; padding:0px; margin:0px">&nbsp;text</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;PT_LOAD ; }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;{ .text : { *(.text) } :</span><span style="color:#99cc00; padding:0px; margin:0px">text&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+可以通过<span style="color:#0000ff; padding:0px; margin:0px">:NONE</span>指定连接器不把该section放入任何程序段内。详情请查看PHDRS命令</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.2.4、设置输出section的填充模版</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">这个在前面提到过，任何输出section描述内的未指定的内存区域，连接器用该模版填充该区域。我们可以通过</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">[=</span><span style="color:#99cc00; padding:0px; margin:0px; line-height:22px">FILLEXP</span><span style="color:#0000ff; padding:0px; margin:0px; line-height:22px">]</span><span style="color:#003366; padding:0px; margin:0px">项设置填充值。用法：</span><span style="color:#99cc00; padding:0px; margin:0px">=FILEEXP</span><span style="color:#003366; padding:0px; margin:0px">，前两字节有效，当区域大于两字节时，重复使用这两字节以将其填满。</span>例子，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">SECTIONS { .text : { *(.text) } =</span><span style="color:#99cc00; padding:0px; margin:0px">0×9090</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">7.3、覆盖图(overlay)描述</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">覆盖图</span><span style="color:#003366; padding:0px; margin:0px">描述使两个或多个不同的section占用同一块程序地址空间。覆盖图管理代码负责将section的拷入和拷出。考虑这种情况，</span><span style="color:#000080; padding:0px; margin:0px">当某存储块的访问速度比其他存储块要快时，那么如果将section拷到该存储块来执行或访问，那么速度将会有所提高，覆盖图描述就很适合这种情形</span><span style="color:#003366; padding:0px; margin:0px">。</span>文法如下，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">OVERLAY</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;[</span><span style="color:#ff6600; padding:0px; margin:0px">START</span><span style="color:#3366ff; padding:0px; margin:0px">] : [</span><span style="color:#ff9900; padding:0px; margin:0px">NOCROSSREFS</span><span style="color:#3366ff; padding:0px; margin:0px">]
+ [</span><span style="color:#339966; padding:0px; margin:0px">AT</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;(</span><span style="color:#008000; padding:0px; margin:0px">&nbsp;LDADDR</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;)]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECNAME1</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">} [:PHDR...] [=FILL]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECNAME2</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">OUTPUT-SECTION-COMMAND</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">} [:PHDR...] [=FILL]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">} [</span><span style="color:#99cc00; padding:0px; margin:0px">&gt;REGION</span><span style="color:#3366ff; padding:0px; margin:0px">]&nbsp;</span><span style="color:#808000; padding:0px; margin:0px">[:PHDR...</span><span style="color:#3366ff; padding:0px; margin:0px">]&nbsp;</span><span style="color:#808000; padding:0px; margin:0px">[=FILL</span><span style="color:#3366ff; padding:0px; margin:0px">]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+由以上文法可以看出，<span style="color:#000080; padding:0px; margin:0px">同一覆盖图内的section具有相同的VMA</span>。这里VMA由<span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">[</span><span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">START</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">]&nbsp;</span>决定。SECNAME2的LMA为SECTNAME1的LMA加上SECNAME1的大小，同理计算SECNAME2,3,4…的LMA。SECNAME1的<span style="color:#993300; padding:0px; margin:0px">LMA</span>由<span style="color:#008000; padding:0px; margin:0px">LDADDR</span>决定，如果它没有被指定，那么由<span style="color:#ff6600; padding:0px; margin:0px">START</span>决定，如果它也没有被指定，那么由当前定位符号的值决定。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">NOCROSSREFS</span>关键字说明各section之间不能交叉引用，否则报错。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">对于</span><span style="color:#993300; padding:0px; margin:0px">OVERLAY描述</span><span style="color:#000080; padding:0px; margin:0px">的每个section，连接器将定义两个符号</span><span style="color:#993300; padding:0px; margin:0px">__load_start_SECNAME</span><span style="color:#000080; padding:0px; margin:0px">和</span><span style="color:#993300; padding:0px; margin:0px">__load_stop_SECNAME</span><span style="color:#000080; padding:0px; margin:0px">，这两个符号的值分别代表SECNAME
+ section的LMA地址的</span><span style="color:#0000ff; padding:0px; margin:0px">开始</span><span style="color:#000080; padding:0px; margin:0px">和</span><span style="color:#0000ff; padding:0px; margin:0px">结束</span><span style="color:#000080; padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+连接器处理完<span style="color:#993300; padding:0px; margin:0px">OVERLAY</span>描述语句后，将定位符号的值加上所有覆盖图内section大小的最大值。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">示例：</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SECTIONS</span>{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+…</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">OVERLAY</span><span style="color:#ff6600; padding:0px; margin:0px">&nbsp;0×1000</span>&nbsp;:&nbsp;<span style="color:#339966; padding:0px; margin:0px">AT</span>&nbsp;(<span style="color:#ff9900; padding:0px; margin:0px">0×4000</span>)</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text0</span>&nbsp;{&nbsp;<span style="color:#0000ff; padding:0px; margin:0px">o1/*.o</span>(.<span style="color:#99cc00; padding:0px; margin:0px">text)</span>&nbsp;}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text1</span>&nbsp;{&nbsp;<span style="color:#0000ff; padding:0px; margin:0px">o2/*.o</span>(<span style="color:#99cc00; padding:0px; margin:0px">.text</span>) }</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+…</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+.text0 section和.text1 section的VMA地址是<span style="color:#ff6600; padding:0px; margin:0px">0×1000</span>，<span style="color:#993300; padding:0px; margin:0px">.text0</span>&nbsp;section加载于地址<span style="color:#ff9900; padding:0px; margin:0px">0×4000</span>，<span style="color:#993300; padding:0px; margin:0px">.text1</span>&nbsp;section紧跟在其后。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+程序代码，拷贝<span style="color:#993300; padding:0px; margin:0px">.text1</span>&nbsp;section代码，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">extern char&nbsp;</span><span style="color:#993300; padding:0px; margin:0px">__load_start_text1</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#993300; padding:0px; margin:0px">&nbsp;__load_stop_text1</span><span style="color:#3366ff; padding:0px; margin:0px">;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">memcpy ((char *)</span><span style="color:#ff6600; padding:0px; margin:0px">&nbsp;0×1000</span><span style="color:#3366ff; padding:0px; margin:0px">, &amp;</span><span style="color:#800000; padding:0px; margin:0px">__load_start_text1</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#993300; padding:0px; margin:0px">&amp;__load_stop_text1</span><span style="padding:0px; margin:0px; color:rgb(51,102,255)">&nbsp;–</span><span style="color:#993300; padding:0px; margin:0px">&nbsp;&amp;__load_start_text1)</span><span style="padding:0px; margin:0px; color:rgb(51,102,255)">;</span></div>
+<br>
+</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">八、 内存区域命令</span><span style="color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px"></span>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在默认情形下，连接器可以为section在程序地址空间内分配任意位置的存储区域。</span><span style="color:#003366; padding:0px; margin:0px">并通过输出</span><span style="color:#800000; padding:0px; margin:0px">section描述的</span><span style="color:#003366; padding:0px; margin:0px">&gt;&nbsp;</span><span style="color:#993300; padding:0px; margin:0px">REGION属性</span><span style="color:#000080; padding:0px; margin:0px">显示地将该输出section限定于在程序地址空间内的某块存储区域，当存储区域大小不能满足要求时，连接器会报告该错误</span><span style="color:#003366; padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#003366; padding:0px; margin:0px; line-height:22px">你也可以用</span><span style="color:#993300; padding:0px; margin:0px; line-height:22px">MEMORY命令</span><span style="color:#003366; padding:0px; margin:0px; line-height:22px">让</span></span></span><span style="padding:0px; margin:0px; color:rgb(0,0,128)">在SECTIONS命令内</span><span style="color:#0000ff; padding:0px; margin:0px">*未*引用</span><span style="padding:0px; margin:0px; color:rgb(0,0,128)">的</span><span style="color:#ff9900; padding:0px; margin:0px; line-height:22px">selection</span><span style="color:#003366; padding:0px; margin:0px; line-height:22px">分配在程序地址空间内的某个存储区域内。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>：以下存储区域指的是在程序地址空间内的。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">MEMORY命令</span>的文法如下，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">MEMORY</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">NAME1 [(ATTR)] : ORIGIN = ORIGIN1, LENGTH = LEN1</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">NAME2 [(ATTR)] : ORIGIN = ORIGIN2, LENGTH = LEN2</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">NAME</span>&nbsp;：存储区域的名字，这个名字可以与符号名、文件名、section名重复，因为它处于一个独立的名字空间。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">ATTR</span>&nbsp;：定义该存储区域的属性，在讲述SECTIONS命令时提到，当某输入section没有在SECTIONS命令内引用时，连接器会把该输入 section直接拷贝成输出section，然后将该输出section放入内存区域内。如果设置了内存区域设置了ATTR属性，那么该区域只接受满足该属性的section(怎么判断该section是否满足？输出section描述内好象没有记录该section的读写执行属性)。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">ATTR</span>属性内可以出现以下7个字符，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">R</span>&nbsp;<span style="color:#000080; padding:0px; margin:0px">只读section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">W</span><span style="color:#000080; padding:0px; margin:0px">&nbsp;读/写section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">X</span><span style="color:#000080; padding:0px; margin:0px">&nbsp;可执行section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">A</span><span style="color:#000080; padding:0px; margin:0px">&nbsp;‘可分配的’section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">I</span><span style="color:#000080; padding:0px; margin:0px">&nbsp;初始化了的section</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">L</span><span style="color:#000080; padding:0px; margin:0px">&nbsp;同I</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">!</span>&nbsp;不满足该字符之后的任何一个属性的section</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">ORIGIN</span>&nbsp;：关键字，区域的开始地址，可简写成org或o</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">LENGTH&nbsp;</span>：关键字，区域的大小，可简写成len或l</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">示例</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">MEMORY</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">rom (rx) : ORIGIN = 0, LENGTH = 256K</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">ram (!rx) : org = 0×40000000, l = 4M</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+此例中<span style="color:#000080; padding:0px; margin:0px">，把在SECTIONS命令内*未*引用的且具有读属性或写属性的输入section放入rom区域内，把其他未引用的输入section放入 ram</span>。如果某输出section要被放入某内存区域内，而该输出section又没有指明ADDRESS属性，那么连接器将该输出section放在该区域内下一个能使用位置。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">九、 PHDRS命令</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">该命令仅在产生ELF目标文件时有效。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">ELF目标文件格式用program headers程序头(程序头内包含一个或多个segment程序段描述)来描述程序如何被载入内存</span><span style="color:#003366; padding:0px; margin:0px">。可以用objdump -p命令查看。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">当在本地ELF系统运行ELF目标文件格式的程序时，系统加载器通过读取程序头信息以知道如何将程序加载到内存。要了解系统加载器如何解析程序头，请参考ELF ABI文档。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在连接脚本内不指定</span><span style="color:#993300; padding:0px; margin:0px">PHDRS</span><span style="color:#003366; padding:0px; margin:0px">命令时，连接器能够很好的创建程序头，但是有时需要更精确的描述程序头，那么</span><span style="color:#993300; padding:0px; margin:0px">PAHDRS</span><span style="color:#003366; padding:0px; margin:0px">命令就派上用场了。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>：一旦在连接脚本内使用了<span style="color:#993300; padding:0px; margin:0px">PHDRS</span>命令，那么连接器**仅会**创建PHDRS命令指定的信息，所以使用时须谨慎。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PHDRS</span>命令文法如下，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">PHDRS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">NAME</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">TYPE</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff9900; padding:0px; margin:0px">[
+ FILEHDR ]</span><span style="color:#ffff00; padding:0px; margin:0px">&nbsp;</span><span style="color:#800080; padding:0px; margin:0px">[ PHDRS ]</span><span style="color:#993366; padding:0px; margin:0px">&nbsp;[ AT ( ADDRESS ) ]</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">[ FLAGS ( FLAGS ) ] ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+其中FILEHDR、PHDRS、AT、FLAGS为关键字。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">NAME</span><span style="color:#993300; padding:0px; margin:0px">&nbsp;</span>：为程序段名，此名字可以与符号名、section名、文件名重复，因为它在一个独立的名字空间内。此名字只能在SECTIONS命令内使用。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">一个程序段可以由多个‘可加载’的section组成。通过输出section描述的属性</span><span style="color:#008000; padding:0px; margin:0px">:PHDRS</span><span style="color:#000080; padding:0px; margin:0px">可以将输出section加入一个程序段，</span><span style="color:#008000; padding:0px; margin:0px">:
+ PHDRS</span><span style="color:#000080; padding:0px; margin:0px">中的</span><span style="color:#008000; padding:0px; margin:0px">PHDRS</span><span style="color:#000080; padding:0px; margin:0px">为程序段名。在一个输出section描述内可以多次使用</span><span style="color:#008000; padding:0px; margin:0px">:PHDRS</span><span style="color:#000080; padding:0px; margin:0px">命令，也即可以将一个section加入多个程序段。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">如果在一个输出section描述内指定了</span><span style="color:#008000; padding:0px; margin:0px">:PHDRS</span><span style="color:#000080; padding:0px; margin:0px">属性，那么其后的输出section描述将默认使用该属性，除非它也定义了:PHDRS属性。显然当多个输出section属于同一程序段时可简化书写。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">TYPE</span>可以是以下八种形式，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_NULL 0</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+表示未被使用的程序段</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_LOAD 1</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+表示该程序段在程序运行时应该被加载</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_DYNAMIC</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+表示该程序段包含动态连接信息</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_INTERP 3</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+表示该程序段内包含程序加载器的名字，在linux下常见的程序加载器是ld-linux.so.2</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_NOTE 4</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+表示该程序段内包含程序的说明信息</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_SHLIB 5</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+一个保留的程序头类型，没有在ELF ABI文档内定义</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">PT_PHDR 6</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+表示该程序段包含程序头信息。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">EXPRESSION</span>&nbsp;表达式值</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+以上每个类型都对应一个数字，该表达式定义一个用户自定的程序头。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; color:rgb(0,51,102)">在TYPE属性后存在FILEHDR关键字，表示该段包含ELF文件头信息；存在PHDRS关键字，表示该段包含ELF程序头信息。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">AT(ADDRESS)</span><span style="color:#333399; padding:0px; margin:0px">属性定义该程序段的加载位置(LMA)，该属性将**覆盖**该程序段内的section的AT()属性。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+默认情况下，连接器会根据该程序段包含的section的属性(什么属性？好象在输出section描述内没有看到)设置<span style="color:#ff00ff; padding:0px; margin:0px">FLAGS</span>标志，该标志用于设置程序段描述的p_flags域。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+下面看一个典型的PHDRS设置</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">示例</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">PHDRS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">headers</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;PT_PHDR PHDRS ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">interp</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;PT_INTERP ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">text</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;PT_LOAD FILEHDR PHDRS ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">data</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;PT_LOAD ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">dynamic</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;PT_DYNAMIC ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">. = SIZEOF_HEADERS;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">.interp</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;: { *(.interp) }&nbsp;</span><span style="color:#008000; padding:0px; margin:0px">:text&nbsp;</span><span style="color:#339966; padding:0px; margin:0px">:interp</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">.text&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">: { *(.text) }&nbsp;</span><span style="color:#008000; padding:0px; margin:0px">:text</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">.</span><span style="color:#ff6600; padding:0px; margin:0px">rodata</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;: { *(.rodata) }</span><span style="color:#808080; padding:0px; margin:0px">&nbsp;/*
+ defaults to :text */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">. = . + 0×1000;&nbsp;</span><span style="color:#808080; padding:0px; margin:0px">/* move to a new page in memory */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">.data</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;: { *(.data) }&nbsp;</span><span style="color:#008000; padding:0px; margin:0px">:data</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">.dynamic</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;: { *(.dynamic) }</span><span style="color:#008000; padding:0px; margin:0px">&nbsp;:data&nbsp;</span><span style="color:#339966; padding:0px; margin:0px">:dynamic</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">十、版本号命令</span></div>
+<div style="padding:0px; margin:0px">当使用ELF目标文件格式时，连接器支持带版本号的符号。版本号也只限于ELF文件格式。</div>
+<div style="padding:0px; margin:0px">读者可以发现仅仅在共享库中，符号的版本号属性才有意义。动态加载器使用符号的版本号为应用程序选择共享库内的一个函数的特定实现版本。</div>
+<div style="padding:0px; margin:0px">可以在连接脚本内直接使用版本号命令，也可以将版本号命令实现于一个特定版本号描述文件(用连接选项–version-script指定该文件)。</div>
+<div style="padding:0px; margin:0px">该命令的文法如下，</div>
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">VERSION&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">{ version-script-commands }</span></div>
+<div style="padding:0px; margin:0px">以下讨论用gcc</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">10.1. 带版本号的符号的定义</span>(共享库内)</div>
+<div style="padding:0px; margin:0px">文件b.c内容如下，</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">int&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; color:rgb(153,51,0)">return 1</span><span style="color:#3366ff; padding:0px; margin:0px">;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+</div>
+</div>
+<div style="padding:0px; margin:0px">写连接器的版本控制脚本，本例中为<span style="color:#993300; padding:0px; margin:0px">b.lds</span>，内容如下</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#ff6600; padding:0px; margin:0px">VER1.0</span><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#99cc00; padding:0px; margin:0px">getVersion;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,102,255)">};</div>
+<div style="padding:0px; margin:0px; color:rgb(51,102,255)">VER2.0{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,102,255)">};</div>
+</div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">$gcc -c&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">b.c</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">$gcc -shared -</span><span style="color:#993300; padding:0px; margin:0px">Wl</span><span style="color:#0000ff; padding:0px; margin:0px">,</span><span style="color:#ff6600; padding:0px; margin:0px">--version-script</span><span style="color:#0000ff; padding:0px; margin:0px">=</span><span style="color:#993300; padding:0px; margin:0px">b.lds</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;-o&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">libb.so</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#808000; padding:0px; margin:0px">b.o</span></div>
+<div style="padding:0px; margin:0px">可以在<span style="color:#ff6600; padding:0px; margin:0px">{}</span>内填入要绑定的符号，本例中<span style="color:#99cc00; padding:0px; margin:0px">getVersion符号</span>就与VER1.0绑定了。</div>
+<div style="padding:0px; margin:0px">那么如果有一个应用程序连接到该库的<span style="color:#99cc00; padding:0px; margin:0px">getVersion符号</span>，那么它连接的就是VER1.0版本的<span style="color:#99cc00; padding:0px; margin:0px">getVersion符号</span></div>
+<div style="padding:0px; margin:0px">如果我们对b.c文件进行了升级，更改如下：</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">int</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">return&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">101;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+</div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)">这里我对<span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">()进行了</span>更改，其返回值的意义也进行改变，也就是它和前不兼容：</span></span></div>
+<div style="padding:0px; margin:0px">为了程序的安全，我们把b.lds更改为，</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">VER1.0</span><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">};</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">VER2.0</span><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#ff6600; padding:0px; margin:0px">getVersion;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">};</span></div>
+</div>
+<div style="padding:0px; margin:0px">然后生成新的libb.so文件。</div>
+<div style="padding:0px; margin:0px">这时如果我们运行app.exe(它已经连接到VER1.0版本的<span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">()</span>)，就会发现该应用程序不能运行了。</div>
+<div style="padding:0px; margin:0px">提示信息如下：</div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">./app.exe: relocation error: ./app.exe: symbol getVersion, version VER1.0 not defined in file libb.so with link time reference</span></div>
+<div style="padding:0px; margin:0px">因为库内没有VER1.0版本的<span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">()</span><span style="padding:0px; margin:0px">，只有VER2.0版本的</span><span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">()</span><span style="padding:0px; margin:0px">。</span></div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">10.2、参看连接的符号的版本</span></div>
+<div style="padding:0px; margin:0px">对上面生成的app.exe执行以下命令：</div>
+<div style="padding:0px; margin:0px"><span style="color:#ff6600; padding:0px; margin:0px">nm&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">app.exe&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">| grep getVersion</span></div>
+<div style="padding:0px; margin:0px">结果</div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">U new_true@@VER1.0</span></div>
+<div style="padding:0px; margin:0px">用nm命令发现app连接到VER1.0版本的getVersion</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">10.3、 GNU的扩充</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#003366; padding:0px; margin:0px">在GNU中，允许在程序文件内绑定 *符号* 到 *带版本号的别名符号*</span></div>
+<div style="padding:0px; margin:0px">文件b.c内容如下，</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">int</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">old_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">return 1;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">int</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">new_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">return 101;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#ff00ff; padding:0px; margin:0px">__asm__</span><span style="color:#3366ff; padding:0px; margin:0px">(".symver&nbsp;</span><span style="color:#339966; padding:0px; margin:0px">old_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#808000; padding:0px; margin:0px">getVersion</span><span style="color:#ff0000; padding:0px; margin:0px">@</span><span style="color:#808000; padding:0px; margin:0px">VER1.0</span><span style="color:#3366ff; padding:0px; margin:0px">");</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#ff00ff; padding:0px; margin:0px">__asm__</span><span style="color:#3366ff; padding:0px; margin:0px">(".symver&nbsp;</span><span style="color:#339966; padding:0px; margin:0px">new_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#808000; padding:0px; margin:0px">getVersion</span><span style="color:#ff0000; padding:0px; margin:0px">@@</span><span style="color:#808000; padding:0px; margin:0px">VER2.0</span><span style="color:#3366ff; padding:0px; margin:0px">");</span></div>
+</div>
+<div style="padding:0px; margin:0px">其中，对于<span style="padding:0px; margin:0px; color:rgb(128,128,0)">VER1.0</span>版本号的<span style="padding:0px; margin:0px; color:rgb(128,128,0)">getVersion</span>别名符号是<span style="color:#339966; padding:0px; margin:0px">old_getVersion</span>；</div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; line-height:22px">对于<span style="padding:0px; margin:0px; color:rgb(128,128,0)">VER2.0</span>版本号的<span style="padding:0px; margin:0px; color:rgb(128,128,0)">getVersion</span>别名符号是<span style="color:#339966; padding:0px; margin:0px">new</span></span><span style="padding:0px; margin:0px; line-height:22px"><span style="color:#339966; padding:0px; margin:0px">_getVersion</span></span><span style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">，</span></div>
+<div style="padding:0px; margin:0px">在连接时，默认的版本号为<span style="color:#808000; padding:0px; margin:0px">VER2.0</span></div>
+<div style="padding:0px; margin:0px">供连接器用的版本控制脚本b.lds内容如下，</div>
+<div style="padding:0px; margin:0px"><span style="color:#808000; padding:0px; margin:0px">VER1.0</span><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">};</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#808000; padding:0px; margin:0px">VER2.0</span><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">};</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#000080; padding:0px; margin:0px">版本控制文件内必须包含版本</span><span style="color:#808000; padding:0px; margin:0px">VER1.0</span><span style="color:#000080; padding:0px; margin:0px">和版本</span><span style="color:#808000; padding:0px; margin:0px">VER2.0</span><span style="color:#000080; padding:0px; margin:0px">的定义，因为在b.c文件内有对他们的引用</span></div>
+<div style="padding:0px; margin:0px">再次执行以下命令编译连接b.c和app.c</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">gcc -c src/b.c</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">gcc -shared -Wl,--version-script=./lds/b.lds -o libb.so b.o</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">gcc -o app.exe ./src/app.c libb.so</span></div>
+<div style="padding:0px; margin:0px">运行：</div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">./app.exe</span></div>
+</div>
+<div style="padding:0px; margin:0px">结果：</div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">Version=0x65</span></div>
+<div style="padding:0px; margin:0px">说明app.exe的确是连接的<span style="padding:0px; margin:0px; color:rgb(128,128,0)">VER2.0</span>的<span style="padding:0px; margin:0px; color:rgb(128,128,0)">getVersion</span>，即<span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">new_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px"><br style="padding:0px; margin:0px">
+</span></div>
+<div style="padding:0px; margin:0px">我们再对app.c进行修改，以使它连接的<span style="padding:0px; margin:0px; line-height:22px; color:rgb(128,128,0)">VER1.0</span>的<span style="padding:0px; margin:0px; line-height:22px; color:rgb(128,128,0)">getVersion</span>，即<span style="color:#ff6600; padding:0px; margin:0px">old</span><span style="color:#ff6600; padding:0px; margin:0px; line-height:22px">_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px; line-height:22px">()</span></div>
+<div style="padding:0px; margin:0px">app.c文件：</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">#include &lt;stdio.h&gt;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#ff00ff; padding:0px; margin:0px">__asm__</span><span style="color:#3366ff; padding:0px; margin:0px">(".symver&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">,</span><span style="color:#339966; padding:0px; margin:0px">getVersion@VER1.0</span><span style="color:#3366ff; padding:0px; margin:0px">");</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">extern int</span><span style="color:#ff6600; padding:0px; margin:0px">&nbsp;getVersion()</span><span style="color:#3366ff; padding:0px; margin:0px">;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#993300; padding:0px; margin:0px">int</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">main()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; white-space:pre"></span>printf("Version=%p\n",&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">getVersion()</span><span style="color:#3366ff; padding:0px; margin:0px">);</span></div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; white-space:pre; color:rgb(51,102,255)"></span><span style="color:#993300; padding:0px; margin:0px">return</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;0;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+</div>
+<div style="padding:0px; margin:0px">再次编译连接b.c和app.c</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px; line-height:22px">
+<div style="padding:0px; margin:0px">运行：</div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">./app.exe</span></div>
+</div>
+<div style="padding:0px; margin:0px; line-height:22px">结果：</div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#0000ff; padding:0px; margin:0px">Version=0x1</span></div>
+<div style="padding:0px; margin:0px; line-height:22px">说明此次app.exe的确是连接的<span style="padding:0px; margin:0px; color:rgb(128,128,0)">VER1.0</span>的<span style="padding:0px; margin:0px; color:rgb(128,128,0)">getVersion</span>，即<span style="color:#ff6600; padding:0px; margin:0px">old</span><span style="color:#ff6600; padding:0px; margin:0px">_getVersion</span><span style="color:#3366ff; padding:0px; margin:0px">()</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#3366ff; padding:0px; margin:0px"><br>
+</span></div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#3366ff; padding:0px; margin:0px"></span>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600"><span style="font-size:14px; padding:0px; margin:0px">十一、 表达式</span></span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">lds中表达式的文法与C语言的表达式文法一致，表达式的值都是整型，如果ld的运行主机和生成文件的目标机都是32位，则表达式是32位数据，否则是64位数据</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+以下是一些常用的表达式：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">_fourk_1 = 4K;</span><span style="color:#808080; padding:0px; margin:0px">&nbsp;/* K、M单位 */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">_fourk_2 = 4096;</span><span style="color:#666699; padding:0px; margin:0px">&nbsp;/* 整数 */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">_fourk_3 = 0×1000;&nbsp;</span><span style="color:#808080; padding:0px; margin:0px">/* 16 进位 */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">_fourk_4 = 01000;&nbsp;</span><span style="color:#808080; padding:0px; margin:0px">/* 8 进位 */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>：1K=1024 1M=1024*1024</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">11.1、符号名</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">没有被引号”"包围的符号，以字母、下划线或’.'开头，可包含字母、下划线、’.'和’-'。当符号名被引号包围时，符号名可以与关键字相同</span>。如，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">“SECTION”=9;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">“with a space” = “also with a space” + 10;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">11.2、定位符号’<span style="color:#ff00ff; padding:0px; margin:0px">.</span>'</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">只在SECTIONS命令内有效，代表一个程序地址空间内的地址。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">注意</span>：在连接时，<span style="color:#000080; padding:0px; margin:0px">当定位符用在SECTIONS命令的</span><span style="color:#0000ff; padding:0px; margin:0px">输出section描述内</span><span style="color:#000080; padding:0px; margin:0px">时，它代表的是该section的当前</span>**<span style="color:#0000ff; padding:0px; margin:0px">偏移</span>**，而不是程序地址空间的绝对地址。当然当程序载入后，符号最后的地址还是程序地址空间的绝对地址。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600"><span style="padding:0px; margin:0px; font-weight:normal"><span style="padding:0px; margin:0px; font-weight:600; line-height:22px">示例11.2_1：</span></span></span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">output</span><span style="color:#ff6600; padding:0px; margin:0px">&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">file1(.text)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.</span>&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">=&nbsp;</span><span style="padding:0px; margin:0px; font-weight:600"><span style="color:#ff00ff; padding:0px; margin:0px">.</span></span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;+
+ 1000;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">file2(.text)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600"><span style="color:#ff00ff; padding:0px; margin:0px">.&nbsp;</span></span><span style="color:#0000ff; padding:0px; margin:0px">+= 1000;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">file3(.text)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">} = 0×1234;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+其中由于对定位符的赋值而产生的空隙由0×1234填充。其他的内容应该容易理解吧。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600; line-height:22px">示例11.2_2：</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+{</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.</span></span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;= 0×100</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text</span><span style="color:#3366ff; padding:0px; margin:0px">: {</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">*(.text)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">.&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">=</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;0×200</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.&nbsp;</span></span><span style="color:#0000ff; padding:0px; margin:0px">= 0×500</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.data</span><span style="color:#3366ff; padding:0px; margin:0px">: {</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">*(.data)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff00ff; padding:0px; margin:0px">.</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;</span><span style="color:#0000ff; padding:0px; margin:0px">+= 0×600</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+}</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+.text section在程序地址空间的开始位置是<span style="color:#0000ff; padding:0px; margin:0px">0x100</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)"><span style="padding:0px; margin:0px; font-weight:600">示例11.2_3</span></div>
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">文件src\a.c</div>
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">#include &lt;stdio.h&gt;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">int a = 100;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">int b=0;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">int c=0;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">int d=1;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">int main()</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">printf( "&amp;a=%p\n", &amp;a );</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">printf( "&amp;b=%p\n", &amp;b );</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">printf( "&amp;c=%p\n", &amp;c );</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">printf( "&amp;d=%p\n", &amp;d );</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">return 0;</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+</div>
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">文件lds\a.lds</div>
+<div style="padding:0px; margin:0px; line-height:22px">
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">a = 10;&nbsp;</span><span style="color:#808080; padding:0px; margin:0px">/* 全局位置 */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#ff00ff; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#ff6600; padding:0px; margin:0px">b</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;= 11;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#993300; padding:0px; margin:0px">.text&nbsp;</span><span style="color:#3366ff; padding:0px; margin:0px">:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">*(.text)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">c = .;</span><span style="color:#808080; padding:0px; margin:0px">&nbsp;/* section描述内 */</span></div>
+<div style="padding:0px; margin:0px"><span style="padding:0px; margin:0px; color:rgb(0,0,0)">. =&nbsp;</span><span style="color:#ff6600; padding:0px; margin:0px">10000</span><span style="padding:0px; margin:0px; color:rgb(0,0,0)">;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">d = .;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">_bdata = (. + 3) &amp; ~ 4;&nbsp;</span><span style="color:#808080; padding:0px; margin:0px">/* SECTIONS命令内 */</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">.data : { *(.data) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(0,0,0)"><span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+</div>
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">
+<div style="padding:0px; margin:0px">在没有使用<span style="color:#99cc00; padding:0px; margin:0px">a.lds</span>情况下编译</div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">gcc -Wall -o a-without-lds.exe ./src/a.c</span></div>
+<div style="padding:0px; margin:0px">运行<span style="color:#0000ff; padding:0px; margin:0px">./a-without-lds.exe</span></div>
+<div style="padding:0px; margin:0px">结果：</div>
+<div style="padding:0px; margin:0px">
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;a=0x601020</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;b=0x601038</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;c=0x60103c</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;d=0x601024</span></div>
+</div>
+<div style="padding:0px; margin:0px">在使用<span style="color:#99cc00; padding:0px; margin:0px">a.lds</span>情况下编译</div>
+<div style="padding:0px; margin:0px"><span style="color:#0000ff; padding:0px; margin:0px">gcc -Wall -o a-with-lds.exe ./src/a.c ./lds/a.lds</span></div>
+<div style="padding:0px; margin:0px">运行<span style="color:#0000ff; padding:0px; margin:0px">./a-with-lds.exe</span></div>
+</div>
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">结果：</div>
+<div style="padding:0px; margin:0px; line-height:22px; color:rgb(0,0,0)">
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;a=0xa</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;b=0xb</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;c=0x400638</span></div>
+<div style="padding:0px; margin:0px"><span style="color:#3366ff; padding:0px; margin:0px">&amp;d=0x402b20</span></div>
+</div>
+</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">10.3、表达式的操作符</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在lds中，表达式的操作符与C语言一致。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+优先级 结合顺序 操作符</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">1</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left ! – ~</span><span style="color:#ff9900; padding:0px; margin:0px">&nbsp;(1)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">2</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left * / %</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">3</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left + -</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">4</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left &gt;&gt;&nbsp; =</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">5</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left &amp;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">6</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left |</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">7</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left &amp;&amp;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">8</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;left ||</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">9</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;right ? :</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">10</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;right &amp;= += -= *= /=&nbsp;</span><span style="color:#ff9900; padding:0px; margin:0px">(2)</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff9900; padding:0px; margin:0px">(1)</span>表示前缀符，<span style="color:#ff9900; padding:0px; margin:0px">(2)</span>表示赋值符。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">10.4、表达式的计算</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">连接器延迟计算大部分表达式的值。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">但是，对待与连接过程紧密相关的表达式，连接器会立即计算表达式，如果不能计算则报错。比如，</span><span style="color:#000080; padding:0px; margin:0px">对于section的VMA地址、内存区域块的开始地址和大小，与其相关的表达式应该立即被计算。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+例子，</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">.text&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">9+this_isnt_constant</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;:</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{ *(.text) }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+这个例子中，9+this_isnt_constant表达式的值用于设置.text section的VMA地址，因此需要立即运算，但是由于this_isnt_constant变量的值不确定，所以此时连接器无法确立表达式的值，此时连接器会报错。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">10.5、相对值与绝对值</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在输出</span><span style="color:#0000ff; padding:0px; margin:0px">section描述内</span><span style="color:#000080; padding:0px; margin:0px">的表达式，连接器取其</span><span style="color:#ff6600; padding:0px; margin:0px">相对值</span><span style="color:#003366; padding:0px; margin:0px">，相对与该section的开始位置的偏移</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">在</span><span style="color:#0000ff; padding:0px; margin:0px">SECTIONS命令内且非输出section描述内</span><span style="color:#003366; padding:0px; margin:0px">的表达式，连接器取其</span><span style="color:#ff6600; padding:0px; margin:0px">绝对值</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+通过ABSOLUTE关键字可以将相对值转化成绝对值，即在原来值的基础上加上表达式所在section的VMA值。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">示例</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">SECTIONS</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">{</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.data</span><span style="color:#0000ff; padding:0px; margin:0px">&nbsp;: { *(.data) ;_edata =&nbsp;</span><span style="color:#ff00ff; padding:0px; margin:0px">ABSOLUTE</span><span style="color:#0000ff; padding:0px; margin:0px">(</span><span style="color:#993300; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.</span></span><span style="color:#0000ff; padding:0px; margin:0px">);
+ }</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+该例子中，_edata符号的值是.data section的末尾位置(绝对值，在程序地址空间内)。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">10.6、内建函数</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">lds中有以下一些内建函数：</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">ABSOLUTE</span>(EXP) ：转换成绝对值</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">ADDR</span>(SECTION) ：返回某section的VMA值。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">ALIGN</span>(EXP) ：返回定位符’<span style="color:#ff00ff; padding:0px; margin:0px"><span style="padding:0px; margin:0px; font-weight:600">.</span></span>'的按照EXP进行对齐后的修调值，对齐后的修调值算法为：<span style="color:#0000ff; padding:0px; margin:0px">(.
+ + EXP – 1) &amp; ~(EXP – 1)</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">BLOCK</span>(EXP) ：如同ALIGN(EXP)，为了向前兼容。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">DEFINED</span>(SYMBOL) ：如果符号SYMBOL在全局符号表内，且被定义了，那么返回1，否则返回0。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">示例</span>：</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#ff6600; padding:0px; margin:0px">SECTIONS</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;{ …</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">.text</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;: {</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#0000ff; padding:0px; margin:0px">begin</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;=</span><span style="color:#ff00ff; padding:0px; margin:0px">&nbsp;DEFINED</span><span style="color:#3366ff; padding:0px; margin:0px">(</span><span style="color:#99cc00; padding:0px; margin:0px">begin</span><span style="color:#3366ff; padding:0px; margin:0px">)
+ ?&nbsp;</span><span style="color:#99cc00; padding:0px; margin:0px">begin</span><span style="color:#3366ff; padding:0px; margin:0px">&nbsp;: . ;</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">…</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#3366ff; padding:0px; margin:0px">}</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">LOADADDR</span>(SECTION) ：返回三SECTION的LMA</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">MAX</span>(EXP1,EXP2) ：返回大者</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">MIN</span>(EXP1,EXP2) ：返回小者</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">NEXT</span>(EXP) ：返回下一个能被使用的地址，该地址是<span style="color:#0000ff; padding:0px; margin:0px">EXP</span>的倍数，类似于ALIGN(EXP)。除非使用了<span style="color:#993300; padding:0px; margin:0px">MEMORY命令</span>定义了一些非连续的内存块，否则NEXT(EXP)与ALIGH(EXP)一定相同。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SIZEOF</span>(SECTION) ：返回SECTION的大小。当SECTION没有被分配时，即此时SECTION的大小还不能确定时，连接器会报错。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#993300; padding:0px; margin:0px">SIZEOF_HEADERS</span>&nbsp;：返回输出文件头部的字节数。这些信息出现在输出文件的开始处。当设置第一个段的开始地址时，你可以使用这个数字。如果你选择了加速分页，当产生一个ELF输出文件时，如果链接器脚本使用SIZEOF_HEADERS内建函数，连接器必须在它</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<div style="padding:0px; margin:0px">算出所有段地址和长度之前计算程序头部的数值。如果连接器后来发现它需要附加程序头，它将报告一个“not enough room for</div>
+<div style="padding:0px; margin:0px">program headers”错误。为了避免这样的错误，你必须避免使用SIZEOF_HEADERS函数，或者你必须修改你的连接器脚本去避免强制</div>
+<div style="padding:0px; margin:0px">连接器去使用附加程序头，或者你必须使用PHDRS命令去定义你自己的程序头</div>
+</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="padding:0px; margin:0px; font-weight:600">十二、 暗含的连接脚本</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">输入文件可以是目标文件，也可以是连接脚本，此时的连接脚本被称为 暗含的连接脚本</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#003366; padding:0px; margin:0px">如果连接器不认识某个输入文件，那么该文件被当作连接脚本被解析。更进一步，如果发现它的格式又不是连接脚本的格式，那么连接器报错。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">一个暗含的连接脚本不会替换默认的连接脚本，仅仅是增加新的连接而已。</span></div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+一般来说，暗含的连接脚本符号分配命令，或INPUT、GROUP、VERSION命令。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+<span style="color:#000080; padding:0px; margin:0px">在连接命令行中，每个输入文件的顺序都被固定好了，暗含的连接脚本在连接命令行内占住一个位置，这个位置决定了由该连接脚本指定的输入文件在连接过程中的顺序</span>。</div>
+<div style="padding:0px; margin:0px; color:rgb(51,51,51); font-family:微软雅黑,Verdana,sans-serif,宋体; font-size:13px; line-height:23px">
+典型的暗含的连接脚本是libc.so文件，在GNU/linux内一般存在/usr/lib目录下。</div>
+<br>
+</div>
+<div style="padding:0px; margin:0px; line-height:22px"><span style="color:#3366ff; padding:0px; margin:0px"><br>
+</span></div>
+</div>
+</div>
+<br>
+</div>
+</div>
+   
+</div>
+		<div id="copyright">
+			<span>&copy; Kevin. All rights reserved. | Photos by <a>Internet</a></span>
+			<!--!<span>Design by <a rel="nofollow">TEMPLATED</a>.</span>-->
+		</div>
+	</div>
+</div>
+</body>
+</html>
